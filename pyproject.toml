@@ -1,0 +1,15 @@
+[project]
+name = "data-agent-mcp"
+version = "0.1.0"
+description = "A blank FastMCP project for a data-agent MCP server."
+requires-python = ">=3.11"
+dependencies = [
+  "fastmcp>=2.0.0"
+]
+
+[project.scripts]
+data-agent-mcp = "data_agent_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
