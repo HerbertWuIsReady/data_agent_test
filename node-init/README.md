@@ -4,8 +4,8 @@ Node.js initialization scenario for local data-agent workspaces.
 
 It creates:
 
-- `agent.md`: 数据分析师说明书。
-- `.mcp.json`: remote MCP server configuration using the common `mcpServers` shape.
+- `AGENTS.md`: 数据分析师说明书。
+- `.codex/config.toml`: Codex remote MCP server configuration.
 
 The default MCP URL is:
 
@@ -38,23 +38,18 @@ npx ./node-init --auth your_fastmcp_token --mcp-url https://your-mcp-host.exampl
 --auth <token>           FastMCP auth token. Can also use DATA_AGENT_MCP_AUTH.
 --server-name <name>     MCP server name. Default: data-agent
 --cwd <path>             Directory to initialize. Default: current directory
---agent-file <path>      Agent instruction file. Default: agent.md
---config-file <path>     MCP config file. Default: .mcp.json
+--agent-file <path>      Agent instruction file. Default: AGENTS.md
+--config-file <path>     MCP config file. Default: .codex/config.toml
 --force                  Overwrite existing generated files.
 ```
 
 ## Generated MCP Config
 
-```json
-{
-  "mcpServers": {
-    "data-agent": {
-      "type": "http",
-      "url": "https://voiceless-olive-giraffe.fastmcp.app/mcp",
-      "headers": {
-        "Authorization": "Bearer your_fastmcp_token"
-      }
-    }
-  }
-}
+```toml
+[mcp_servers.data-agent]
+type = "http"
+url = "https://voiceless-olive-giraffe.fastmcp.app/mcp"
+
+[mcp_servers.data-agent.headers]
+Authorization = "Bearer your_fastmcp_token"
 ```

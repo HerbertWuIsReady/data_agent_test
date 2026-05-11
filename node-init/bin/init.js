@@ -4,8 +4,8 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-const DEFAULT_AGENT_FILE = "agent.md";
-const DEFAULT_CONFIG_FILE = ".mcp.json";
+const DEFAULT_AGENT_FILE = "AGENTS.md";
+const DEFAULT_CONFIG_FILE = ".codex/config.toml";
 const DEFAULT_SERVER_NAME = "data-agent";
 const DEFAULT_MCP_URL = "https://voiceless-olive-giraffe.fastmcp.app/mcp";
 
@@ -58,7 +58,7 @@ function printHelp() {
   console.log(`
 data-agent-mcp-init
 
-Initialize the current directory with an agent.md file and remote MCP config.
+Initialize the current directory with AGENTS.md and Codex MCP config.
 
 Usage:
   DATA_AGENT_MCP_AUTH=... npx ./node-init
@@ -70,8 +70,8 @@ Options:
   --auth <token>           FastMCP auth token. Can also use DATA_AGENT_MCP_AUTH.
   --server-name <name>     MCP server name. Default: data-agent
   --cwd <path>             Directory to initialize. Default: current directory
-  --agent-file <path>      Agent instruction file. Default: agent.md
-  --config-file <path>     MCP config file. Default: .mcp.json
+  --agent-file <path>      Agent instruction file. Default: AGENTS.md
+  --config-file <path>     MCP config file. Default: .codex/config.toml
   --force                  Overwrite existing generated files.
   -h, --help               Show help.
 `.trim());
@@ -117,27 +117,35 @@ function renderAgent({ serverName, mcpUrl }) {
 `;
 }
 
-function renderMcpConfig({ serverName, mcpUrl, auth }) {
-  const serverConfig = {
-    type: "http",
-    url: mcpUrl,
-  };
+function tomlString(value) {
+  return JSON.stringify(value);
+}
 
-  if (auth) {
-    serverConfig.headers = {
-      Authorization: `Bearer ${auth}`,
-    };
+function tomlKey(key) {
+  if (/^[A-Za-z0-9_-]+$/.test(key)) {
+    return key;
   }
 
-  return `${JSON.stringify(
-    {
-      mcpServers: {
-        [serverName]: serverConfig,
-      },
-    },
-    null,
-    2,
-  )}\n`;
+  return tomlString(key);
+}
+
+function tomlTablePath(parts) {
+  return parts.map((part) => tomlKey(part)).join(".");
+}
+
+function renderMcpConfig({ serverName, mcpUrl, auth }) {
+  const serverPath = tomlTablePath(["mcp_servers", serverName]);
+  const lines = [
+    `[${serverPath}]`,
+    'type = "http"',
+    `url = ${tomlString(mcpUrl)}`,
+  ];
+
+  if (auth) {
+    lines.push("", `[${serverPath}.headers]`, `Authorization = ${tomlString(`Bearer ${auth}`)}`);
+  }
+
+  return `${lines.join("\n")}\n`;
 }
 
 async function exists(filePath) {
@@ -174,7 +182,7 @@ async function main() {
   }
 
   if (!options.auth) {
-    console.warn("warning: no auth token provided; .mcp.json will not include Authorization headers.");
+    console.warn("warning: no auth token provided; config.toml will not include Authorization headers.");
   }
 
   const agentPath = path.resolve(options.cwd, options.agentFile);

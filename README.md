@@ -31,8 +31,8 @@ python3 -m unittest discover -s tests -v
 This repository also includes a Node.js `npx` initializer under `node-init/`.
 It initializes the current directory with:
 
-- `agent.md`
-- `.mcp.json` remote MCP server config
+- `AGENTS.md`
+- `.codex/config.toml` remote MCP server config
 
 Run from this repository:
 
