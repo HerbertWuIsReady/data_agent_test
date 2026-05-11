@@ -16,27 +16,33 @@ https://voiceless-olive-giraffe.fastmcp.app/mcp
 ## Run From This Repository
 
 ```bash
-DATA_AGENT_MCP_AUTH=your_fastmcp_token npx ./node-init
+npx ./node-init
 ```
 
 Initialize another directory:
 
 ```bash
-DATA_AGENT_MCP_AUTH=your_fastmcp_token npx ./node-init --cwd /path/to/workspace
+npx ./node-init --cwd /path/to/workspace
 ```
 
 Override the MCP server URL:
 
 ```bash
-npx ./node-init --auth your_fastmcp_token --mcp-url https://your-mcp-host.example.com/mcp
+npx ./node-init --mcp-url https://your-mcp-host.example.com/mcp
+```
+
+Before running Codex in the initialized workspace, export the bearer token:
+
+```bash
+export DATA_AGENT_MCP_TOKEN="your_fastmcp_token"
 ```
 
 ## Options
 
 ```text
 --mcp-url <url>          Remote MCP server URL.
---auth <token>           FastMCP auth token. Can also use DATA_AGENT_MCP_AUTH.
---server-name <name>     MCP server name. Default: data-agent
+--token-env-var <name>   Env var used by Codex for bearer token. Default: DATA_AGENT_MCP_TOKEN
+--server-name <name>     MCP server/app name. Default: data_agent
 --cwd <path>             Directory to initialize. Default: current directory
 --agent-file <path>      Agent instruction file. Default: AGENTS.md
 --config-file <path>     MCP config file. Default: .codex/config.toml
@@ -46,10 +52,17 @@ npx ./node-init --auth your_fastmcp_token --mcp-url https://your-mcp-host.exampl
 ## Generated MCP Config
 
 ```toml
-[mcp_servers.data-agent]
-type = "http"
-url = "https://voiceless-olive-giraffe.fastmcp.app/mcp"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
 
-[mcp_servers.data-agent.headers]
-Authorization = "Bearer your_fastmcp_token"
+[mcp_servers.data_agent]
+url = "https://voiceless-olive-giraffe.fastmcp.app/mcp"
+bearer_token_env_var = "DATA_AGENT_MCP_TOKEN"
+enabled = true
+tool_timeout_sec = 60
+
+[apps.data_agent]
+default_tools_approval_mode = "approve"
+destructive_enabled = false
+open_world_enabled = false
 ```

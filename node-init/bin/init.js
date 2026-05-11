@@ -6,8 +6,9 @@ import process from "node:process";
 
 const DEFAULT_AGENT_FILE = "AGENTS.md";
 const DEFAULT_CONFIG_FILE = ".codex/config.toml";
-const DEFAULT_SERVER_NAME = "data-agent";
+const DEFAULT_SERVER_NAME = "data_agent";
 const DEFAULT_MCP_URL = "https://voiceless-olive-giraffe.fastmcp.app/mcp";
+const DEFAULT_TOKEN_ENV_VAR = "DATA_AGENT_MCP_TOKEN";
 
 function parseArgs(argv) {
   const options = {
@@ -16,7 +17,7 @@ function parseArgs(argv) {
     configFile: DEFAULT_CONFIG_FILE,
     serverName: DEFAULT_SERVER_NAME,
     mcpUrl: DEFAULT_MCP_URL,
-    auth: process.env.DATA_AGENT_MCP_AUTH || "",
+    tokenEnvVar: DEFAULT_TOKEN_ENV_VAR,
     force: false,
   };
 
@@ -42,8 +43,8 @@ function parseArgs(argv) {
       options.serverName = next();
     } else if (arg === "--mcp-url") {
       options.mcpUrl = next();
-    } else if (arg === "--auth") {
-      options.auth = next();
+    } else if (arg === "--token-env-var") {
+      options.tokenEnvVar = next();
     } else if (arg === "--force") {
       options.force = true;
     } else {
@@ -61,14 +62,14 @@ data-agent-mcp-init
 Initialize the current directory with AGENTS.md and Codex MCP config.
 
 Usage:
-  DATA_AGENT_MCP_AUTH=... npx ./node-init
-  npx ./node-init --auth ... --mcp-url https://example.com/mcp
-  npx data-agent-mcp-init --auth ...
+  npx ./node-init
+  npx ./node-init --mcp-url https://example.com/mcp
+  npx data-agent-mcp-init
 
 Options:
   --mcp-url <url>          Remote MCP server URL. Default: ${DEFAULT_MCP_URL}
-  --auth <token>           FastMCP auth token. Can also use DATA_AGENT_MCP_AUTH.
-  --server-name <name>     MCP server name. Default: data-agent
+  --token-env-var <name>   Env var used by Codex for bearer token. Default: ${DEFAULT_TOKEN_ENV_VAR}
+  --server-name <name>     MCP server/app name. Default: data_agent
   --cwd <path>             Directory to initialize. Default: current directory
   --agent-file <path>      Agent instruction file. Default: AGENTS.md
   --config-file <path>     MCP config file. Default: .codex/config.toml
@@ -122,7 +123,7 @@ function tomlString(value) {
 }
 
 function tomlKey(key) {
-  if (/^[A-Za-z0-9_-]+$/.test(key)) {
+  if (/^[A-Za-z0-9_]+$/.test(key)) {
     return key;
   }
 
@@ -133,17 +134,24 @@ function tomlTablePath(parts) {
   return parts.map((part) => tomlKey(part)).join(".");
 }
 
-function renderMcpConfig({ serverName, mcpUrl, auth }) {
+function renderMcpConfig({ serverName, mcpUrl, tokenEnvVar }) {
   const serverPath = tomlTablePath(["mcp_servers", serverName]);
+  const appPath = tomlTablePath(["apps", serverName]);
   const lines = [
+    'approval_policy = "on-request"',
+    'sandbox_mode = "workspace-write"',
+    "",
     `[${serverPath}]`,
-    'type = "http"',
     `url = ${tomlString(mcpUrl)}`,
+    `bearer_token_env_var = ${tomlString(tokenEnvVar)}`,
+    "enabled = true",
+    "tool_timeout_sec = 60",
+    "",
+    `[${appPath}]`,
+    'default_tools_approval_mode = "approve"',
+    "destructive_enabled = false",
+    "open_world_enabled = false",
   ];
-
-  if (auth) {
-    lines.push("", `[${serverPath}.headers]`, `Authorization = ${tomlString(`Bearer ${auth}`)}`);
-  }
 
   return `${lines.join("\n")}\n`;
 }
@@ -179,10 +187,6 @@ async function main() {
 
   if (!options.mcpUrl) {
     throw new Error("--mcp-url is required.");
-  }
-
-  if (!options.auth) {
-    console.warn("warning: no auth token provided; config.toml will not include Authorization headers.");
   }
 
   const agentPath = path.resolve(options.cwd, options.agentFile);
