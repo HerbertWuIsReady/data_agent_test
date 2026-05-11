@@ -6,7 +6,7 @@
     "result_check": "non_empty_items",
     "selected_tool": "search_metric",
     "arguments": {
-      "query": "DAU 指标",
+      "query": "DAU",
       "top_n": 3
     },
     "selection_passed": true,
@@ -148,7 +148,7 @@
     "result_check": "non_empty_items",
     "selected_tool": "search_table",
     "arguments": {
-      "query": "DAU 日活跃用户 数据表",
+      "query": "DAU 日活跃用户 需求 数据表",
       "top_n": 3
     },
     "selection_passed": true,

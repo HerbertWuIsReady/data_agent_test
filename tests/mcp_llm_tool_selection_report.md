@@ -1,6 +1,6 @@
 # MCP LLM Tool Selection Report
 
-Test date: 2026-05-11 12:55:12
+Test date: 2026-05-11 13:05:35
 
 Goal: verify that a client can discover MCP tools, ask an LLM to select a tool based on a user need, then execute the selected MCP tool.
 
@@ -31,7 +31,7 @@ Arguments:
 
 ```json
 {
-  "query": "DAU 指标",
+  "query": "DAU",
   "top_n": 3
 }
 ```
@@ -191,7 +191,7 @@ Arguments:
 
 ```json
 {
-  "query": "DAU 日活跃用户 数据表",
+  "query": "DAU 日活跃用户 需求 数据表",
   "top_n": 3
 }
 ```
