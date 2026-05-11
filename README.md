@@ -37,11 +37,11 @@ It initializes the current directory with:
 Run from this repository:
 
 ```bash
-npx ./node-init --mcp-url https://your-mcp-host.example.com/mcp
+DATA_AGENT_MCP_AUTH=your_fastmcp_token npx ./node-init
 ```
 
 Initialize another directory:
 
 ```bash
-npx ./node-init --cwd /path/to/workspace --mcp-url https://your-mcp-host.example.com/mcp
+DATA_AGENT_MCP_AUTH=your_fastmcp_token npx ./node-init --cwd /path/to/workspace
 ```
