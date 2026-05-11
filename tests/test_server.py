@@ -116,6 +116,20 @@ class ServerSqlValidationTest(unittest.TestCase):
             result["rows"],
         )
 
+    def test_execute_query_does_not_call_decorated_validate_tool(self):
+        original_validate_sql = server.validate_sql
+        try:
+            server.validate_sql = object()
+
+            result = server.execute_query(
+                "SELECT COUNT(*) AS cnt FROM ads_user_active_metric_di WHERE dt = '2026-05-10'"
+            )
+        finally:
+            server.validate_sql = original_validate_sql
+
+        self.assertEqual("success", result["status"], result)
+        self.assertEqual([{"cnt": 5}], result["rows"])
+
     def test_execute_query_rejects_forbidden_write_without_running_it(self):
         result = server.execute_query(
             "UPDATE ads_user_active_metric_di SET is_bot = 1 WHERE dt = '2026-05-10'"

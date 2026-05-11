@@ -487,9 +487,7 @@ def get_table_schema(table_name: str) -> dict:
     return {"item": {**table, "columns": columns}}
 
 
-@mcp.tool
-def validate_sql(sql: str) -> dict:
-    """校验 SQL 并返回 explain 后的信息."""
+def _validate_sql(sql: str) -> dict:
     normalized = normalize_sql(sql)
     errors = validate_read_only(normalized)
     metadata_errors, warnings = validate_metadata(normalized)
@@ -516,9 +514,7 @@ def validate_sql(sql: str) -> dict:
     }
 
 
-@mcp.tool
-def execute_query(sql: str, validation_id: str | None = None) -> dict:
-    """只执行通过校验的 SQL."""
+def _execute_query(sql: str, validation_id: str | None = None) -> dict:
     normalized = normalize_sql(sql)
     current_validation_id = validation_id_for(normalized)
 
@@ -529,7 +525,7 @@ def execute_query(sql: str, validation_id: str | None = None) -> dict:
         }
 
     if VALIDATED_SQL.get(current_validation_id) != normalized:
-        validation = validate_sql(normalized)
+        validation = _validate_sql(normalized)
         if not validation["is_valid"]:
             return {
                 "status": "rejected",
@@ -543,6 +539,18 @@ def execute_query(sql: str, validation_id: str | None = None) -> dict:
         "row_count": len(rows),
         "rows": rows,
     }
+
+
+@mcp.tool
+def validate_sql(sql: str) -> dict:
+    """校验 SQL 并返回 explain 后的信息."""
+    return _validate_sql(sql)
+
+
+@mcp.tool
+def execute_query(sql: str, validation_id: str | None = None) -> dict:
+    """只执行通过校验的 SQL."""
+    return _execute_query(sql, validation_id)
 
 
 def main() -> None:
