@@ -4,26 +4,18 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-const DEFAULT_AGENT_FILE = "AGENTS.md";
-const DEFAULT_CONFIG_FILE = ".codex/config.toml";
-const DEFAULT_CLAUDE_FILE = "CLAUDE.md";
-const DEFAULT_CLAUDE_CONFIG_FILE = ".mcp.json";
-const DEFAULT_SERVER_NAME = "data_agent";
-const DEFAULT_CLAUDE_SERVER_NAME = "data-agent";
+const DEFAULT_AGENT_FILE = "CLAUDE.md";
+const DEFAULT_CONFIG_FILE = ".mcp.json";
+const DEFAULT_SERVER_NAME = "data-agent";
 const DEFAULT_MCP_URL = "https://voiceless-olive-giraffe.fastmcp.app/mcp";
 const DEFAULT_TOKEN_ENV_VAR = "DATA_AGENT_MCP_TOKEN";
-const TARGETS = new Set(["both", "codex", "claude"]);
 
 function parseArgs(argv) {
   const options = {
     cwd: process.cwd(),
-    target: "both",
     agentFile: DEFAULT_AGENT_FILE,
     configFile: DEFAULT_CONFIG_FILE,
-    claudeFile: DEFAULT_CLAUDE_FILE,
-    claudeConfigFile: DEFAULT_CLAUDE_CONFIG_FILE,
     serverName: DEFAULT_SERVER_NAME,
-    claudeServerName: DEFAULT_CLAUDE_SERVER_NAME,
     mcpUrl: DEFAULT_MCP_URL,
     tokenEnvVar: DEFAULT_TOKEN_ENV_VAR,
     force: false,
@@ -41,22 +33,14 @@ function parseArgs(argv) {
 
     if (arg === "--help" || arg === "-h") {
       options.help = true;
-    } else if (arg === "--target") {
-      options.target = next();
     } else if (arg === "--cwd") {
       options.cwd = path.resolve(next());
     } else if (arg === "--agent-file") {
       options.agentFile = next();
     } else if (arg === "--config-file") {
       options.configFile = next();
-    } else if (arg === "--claude-file") {
-      options.claudeFile = next();
-    } else if (arg === "--claude-config-file") {
-      options.claudeConfigFile = next();
     } else if (arg === "--server-name") {
       options.serverName = next();
-    } else if (arg === "--claude-server-name") {
-      options.claudeServerName = next();
     } else if (arg === "--mcp-url") {
       options.mcpUrl = next();
     } else if (arg === "--token-env-var") {
@@ -73,39 +57,31 @@ function parseArgs(argv) {
 
 function printHelp() {
   console.log(`
-data-agent-mcp-init
+data-agent-claude-init
 
-Initialize the current directory for Codex, Claude Code, or both.
+Initialize the current directory with CLAUDE.md and Claude Code project MCP config.
 
 Usage:
-  npx ./node-init
-  npx ./node-init --target codex
-  npx ./node-init --target claude
-  npx ./node-init --mcp-url https://example.com/mcp
-  npx data-agent-mcp-init
+  npx ./node-init-claude
+  npx ./node-init-claude --mcp-url https://example.com/mcp
+  npx data-agent-claude-init
 
 Options:
-  --target <name>         Initialization target: both, codex, claude. Default: both
   --mcp-url <url>          Remote MCP server URL. Default: ${DEFAULT_MCP_URL}
-  --token-env-var <name>   Env var used for bearer token. Default: ${DEFAULT_TOKEN_ENV_VAR}
-  --server-name <name>     Codex MCP server/app name. Default: data_agent
-  --claude-server-name <name>
-                            Claude Code MCP server name. Default: data-agent
+  --token-env-var <name>   Env var expanded by Claude Code for bearer token. Default: ${DEFAULT_TOKEN_ENV_VAR}
+  --server-name <name>     MCP server name. Default: data-agent
   --cwd <path>             Directory to initialize. Default: current directory
-  --agent-file <path>      Codex instruction file. Default: AGENTS.md
-  --config-file <path>     Codex MCP config file. Default: .codex/config.toml
-  --claude-file <path>     Claude instruction file. Default: CLAUDE.md
-  --claude-config-file <path>
-                            Claude MCP config file. Default: .mcp.json
+  --agent-file <path>      Claude instruction file. Default: CLAUDE.md
+  --config-file <path>     Claude Code MCP config file. Default: .mcp.json
   --force                  Overwrite existing generated files.
   -h, --help               Show help.
 `.trim());
 }
 
-function renderAgent() {
+function renderClaudeInstructions() {
   return `# 数据分析师说明书
 
-你是一名严谨、可复核的数据分析师。你的任务是帮助用户把业务问题转化为可靠的数据分析过程，并在本地工作区中优先使用已经配置好的 MCP 服务完成元数据查询、SQL 校验和数据查询。
+你是一名严谨、可复核的数据分析师。你的任务是帮助用户把业务问题转化为可靠的数据分析过程，并在 Claude Code 中优先使用项目已配置的 MCP 服务完成元数据查询、SQL 校验和数据查询。
 
 ## 工作原则
 
@@ -117,7 +93,7 @@ function renderAgent() {
 
 ## MCP 使用方式
 
-1. 先发现当前可用的 MCP 工具能力，再决定调用顺序。
+1. 先通过 Claude Code 的 MCP 能力发现当前可用工具，再决定调用顺序。
 2. 查指标时，应获取指标名称、业务定义、计算公式、默认过滤条件、来源表和支持维度。
 3. 查表和字段时，应确认表粒度、分区字段、时间字段、字段类型、字段语义、是否可过滤、是否可分组。
 4. 生成 SQL 后，如果环境提供 SQL 校验工具，必须先校验再执行。
@@ -144,49 +120,11 @@ function renderAgent() {
 `;
 }
 
-function tomlString(value) {
-  return JSON.stringify(value);
-}
-
-function tomlKey(key) {
-  if (/^[A-Za-z0-9_]+$/.test(key)) {
-    return key;
-  }
-
-  return tomlString(key);
-}
-
-function tomlTablePath(parts) {
-  return parts.map((part) => tomlKey(part)).join(".");
-}
-
-function renderMcpConfig({ serverName, mcpUrl, tokenEnvVar }) {
-  const serverPath = tomlTablePath(["mcp_servers", serverName]);
-  const appPath = tomlTablePath(["apps", serverName]);
-  const lines = [
-    'approval_policy = "on-request"',
-    'sandbox_mode = "workspace-write"',
-    "",
-    `[${serverPath}]`,
-    `url = ${tomlString(mcpUrl)}`,
-    `bearer_token_env_var = ${tomlString(tokenEnvVar)}`,
-    "enabled = true",
-    "tool_timeout_sec = 60",
-    "",
-    `[${appPath}]`,
-    'default_tools_approval_mode = "approve"',
-    "destructive_enabled = false",
-    "open_world_enabled = false",
-  ];
-
-  return `${lines.join("\n")}\n`;
-}
-
-function renderClaudeMcpConfig({ claudeServerName, mcpUrl, tokenEnvVar }) {
+function renderMcpJson({ serverName, mcpUrl, tokenEnvVar }) {
   return `${JSON.stringify(
     {
       mcpServers: {
-        [claudeServerName]: {
+        [serverName]: {
           type: "http",
           url: mcpUrl,
           headers: {
@@ -229,43 +167,27 @@ async function main() {
     return;
   }
 
-  if (!TARGETS.has(options.target)) {
-    throw new Error(`--target must be one of: ${Array.from(TARGETS).join(", ")}`);
-  }
-
   if (!options.mcpUrl) {
     throw new Error("--mcp-url is required.");
   }
 
-  const results = [];
+  const agentPath = path.resolve(options.cwd, options.agentFile);
+  const configPath = path.resolve(options.cwd, options.configFile);
 
-  if (options.target === "both" || options.target === "codex") {
-    results.push(
-      await writeGeneratedFile(path.resolve(options.cwd, options.agentFile), renderAgent(), options.force),
-      await writeGeneratedFile(path.resolve(options.cwd, options.configFile), renderMcpConfig(options), options.force),
-    );
-  }
-
-  if (options.target === "both" || options.target === "claude") {
-    results.push(
-      await writeGeneratedFile(path.resolve(options.cwd, options.claudeFile), renderAgent(), options.force),
-      await writeGeneratedFile(
-        path.resolve(options.cwd, options.claudeConfigFile),
-        renderClaudeMcpConfig(options),
-        options.force,
-      ),
-    );
-  }
+  const results = [
+    await writeGeneratedFile(agentPath, renderClaudeInstructions(), options.force),
+    await writeGeneratedFile(configPath, renderMcpJson(options), options.force),
+  ];
 
   for (const result of results) {
     console.log(`${result.status}: ${path.relative(options.cwd, result.path)}`);
   }
 
   console.log(`initialized: ${options.cwd}`);
-  console.log(`before running clients, export ${options.tokenEnvVar}=<token>`);
+  console.log(`before running Claude Code, export ${options.tokenEnvVar}=<token>`);
 }
 
 main().catch((error) => {
-  console.error(`data-agent-mcp-init: ${error.message}`);
+  console.error(`data-agent-claude-init: ${error.message}`);
   process.exitCode = 1;
 });
